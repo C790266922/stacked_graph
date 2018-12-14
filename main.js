@@ -85,6 +85,7 @@ function stackedGraph(canvas, data, options) {
 	this.originY = 0;
 	this.streamGraph = 0;
 	this.streamPointsArrs = [];
+	this.inStream = [];
 	this.init(options);
 }
 
@@ -109,6 +110,7 @@ stackedGraph.prototype = {
 		this.originX = this.padding + 0.5;
 		this.originY = this.height - this.padding + 0.5;
 		this.streamPointsArrs = [];
+		this.inStream = [];
 		this.looping();
 	},
 	looping: function() {
@@ -120,8 +122,10 @@ stackedGraph.prototype = {
 			window.cancelAnimationFrame(this.looped);
 			this.looped = null;
 			if(this.streamGraph == 0){
+				this.canvas.removeEventListener('mousemove', this.streamWatchHoverHandler);
 				this.barWatchHover();
 			} else {
+				this.canvas.removeEventListener('mousemove', this.barWatchHoverHandler);
 				this.streamWatchHover();
 			}
 		}
@@ -140,7 +144,7 @@ stackedGraph.prototype = {
 				this.data[i].right = this.padding + this.xLength * (i + 0.75);
 				this.data[i].bottom = this.height - this.padding;
 				this.data[i].center = (this.data[i].left + this.data[i].right) / 2;
-				
+
 				this.drawUpdate();
 			}
 		} else {
@@ -208,7 +212,6 @@ stackedGraph.prototype = {
 				this.data[i].top - 5
 			);
 		}
-		//console.log(this.ctx.isPointInPath(10, 10));
 	},
 
 	drawStream: function() {
@@ -234,7 +237,7 @@ stackedGraph.prototype = {
 					}
 					var y = this.originY - sum * this.yRatio;
 					this.ctx.lineTo(this.data[j].center, y);
-					
+
 					cords.push({
 						x: this.data[j].center,
 						y: y
@@ -313,12 +316,14 @@ stackedGraph.prototype = {
 	toStream: function() {
 		this.streamGraph = 1;
 		this.current = 0;
+		this.canvas.removeEventListener('mousemove', this.barWatchHoverHandler);
 		this.looping();
 	},
 
 	toBar: function() {
 		this.streamGraph = 0;
 		this.current = 0;
+		this.canvas.removeEventListener('mousemove', this.streamWatchHoverHandler);
 		this.looping();
 	},
 
@@ -330,57 +335,60 @@ stackedGraph.prototype = {
 
 	streamWatchHover: function () {
 		this.canvas.addEventListener('mousemove', this.streamWatchHoverHandler);
-
-/*		self.canvas.addEventListener('mousemove', function () {
-			for(var i = 0; i < self.data[0].values.length; ++i) {
-				self.ctx.save();
-
-				self.ctx.beginPath();
-				self.ctx.moveTo(self.streamPointsArrs[i][0].x, self.streamPointsArrs[i][0].y);
-				for(var j = 0; j < self.streamPointsArrs[i].length; ++j) {
-					self.ctx.lineTo(self.streamPointsArrs[i][j].x, self.streamPointsArrs[i][j].y);
-				}
-
-				if(self.ctx.isPointInPath(window.event.offsetX, window.event.offsetY)) {
-					console.log(i);
-					//self.ctx.strokeStyle = "#FFFF00";
-					//self.ctx.stroke();
-					self.ctx.fillStyle = "#FFFF00";
-					self.ctx.fill();
-				} else {
-					self.ctx.fillStyle = self.fillColor[i];
-					self.ctx.fill();
-				}
-				self.ctx.restore()
-			}	
-		});
-*/
 	},
 
 	streamWatchHoverHandler: function (ev) {
-		for(var i = 0; i < this.data[0].values.length; ++i) {
-				this.ctx.save();
+		var chart = window.chart;
+		for(var i = 0; i < chart.data[0].values.length; ++i) {
+			chart.ctx.save();
+			chart.ctx.beginPath();
+			chart.ctx.moveTo(chart.streamPointsArrs[i][0].x, chart.streamPointsArrs[i][0].y);
+			for(var j = 0; j < chart.streamPointsArrs[i].length; ++j) {
+				chart.ctx.lineTo(chart.streamPointsArrs[i][j].x, chart.streamPointsArrs[i][j].y);
+			}
+			if(chart.ctx.isPointInPath(ev.offsetX, ev.offsetY)) {
+				chart.ctx.fillStyle = "#FFFF00";
+				chart.ctx.fill();
 
-				this.ctx.beginPath();
-				this.ctx.moveTo(this.streamPointsArrs[i][0].x, this.streamPointsArrs[i][0].y);
-				for(var j = 0; j < this.streamPointsArrs[i].length; ++j) {
-					this.ctx.lineTo(this.streamPointsArrs[i][j].x, this.streamPointsArrs[i][j].y);
+				var sum = 0;
+				for(var j = 0; j < chart.dataLength; ++j) {
+					sum += chart.data[j].values[i];
 				}
-
-				if(this.ctx.isPointInPath(ev.offsetX, ev.offsetY)) {
-					console.log(i);
-					//this.ctx.strokeStyle = "#FFFF00";
-					//this.ctx.stroke();
-					this.ctx.fillStyle = "#FFFF00";
-					this.ctx.fill();
+				var msg = 'Sum(' + chart.data[0].names[i] + '):' + String(sum);
+				popupDiv = document.getElementById('popup_div');
+				popupDiv.style.display = 'block';
+				popupDiv.style.left = String(ev.clientX + 10) + 'px';
+				popupDiv.style.top = String(ev.clientY + 5) + 'px';
+				popupDiv.style.position = 'absolute';
+				popupDiv.style.background = chart.fillColor[i];
+				popupDiv.innerHTML = msg;
+				
+				if(i in chart.inStream) {
+					continue;
 				} else {
-					this.ctx.fillStyle = this.fillColor[i];
-					this.ctx.fill();
+					chart.inStream.push(i);
 				}
-				this.ctx.restore()
-			}	
-	},
 
+			} else {
+				chart.ctx.fillStyle = chart.fillColor[i];
+				chart.ctx.fill();
+
+				if(i in chart.inStream) {
+					var idx = chart.inStream.indexOf(i);
+					chart.inStream.splice(idx, 1); 
+				}
+			}
+			console.log(chart.inStream);
+
+			if(chart.inStream.length == 0) {
+				popupDiv = document.getElementById('popup_div');
+				popupDiv.style.display = 'none';
+			}
+
+			chart.ctx.restore()
+		}	
+
+	},
 
 	drawAxis: function() {
 		this.ctx.beginPath();
@@ -443,37 +451,37 @@ stackedGraph.prototype = {
 	},
 
 	barWatchHover: function() {
-		var self = this;
-		self.canvas.addEventListener('mousemove', function(ev) {
-			ev = ev || window.event;
-			self.currentIndex = -1;
-			for (var i = 0; i < self.data.length; i ++){
-				if( ev.offsetX > self.data[i].left &&
-					ev.offsetX < self.data[i].right &&
-					ev.offsetY > self.data[i].top &&
-					ev.offsetY < self.data[i].bottom )
-				{
-					self.currentIndex = i;
-					var height = self.data[i].bottom - event.offsetY;
-					var idx = -1;
-					while (height > 0) {
-						idx += 1;
-						height -= self.data[i].values[idx] * self.yRatio;
-					}
+		this.canvas.addEventListener('mousemove', this.barWatchHoverHandler);
+	},
 
-					var msg = self.data[i].names[idx] + ':' + String(self.data[i].values[idx]);
-					popupDiv = document.getElementById('popup_div');
-					popupDiv.style.display = 'block';
-					popupDiv.style.left = String(event.clientX + 10) + 'px';
-					popupDiv.style.top = String(event.clientY + 5) + 'px';
-					popupDiv.style.position = 'absolute';
-					popupDiv.style.background = self.fillColor[idx];
-					popupDiv.innerHTML = msg;
+	barWatchHoverHandler: function (ev) {
+		var chart = window.chart;
+		chart.currentIndex = -1;
+		for (var i = 0; i < chart.data.length; i ++){
+			if( ev.offsetX > chart.data[i].left &&
+				ev.offsetX < chart.data[i].right &&
+				ev.offsetY > chart.data[i].top &&
+				ev.offsetY < chart.data[i].bottom )
+			{
+				chart.currentIndex = i;
+				var height = chart.data[i].bottom - ev.offsetY;
+				var idx = -1;
+				while (height > 0) {
+					idx += 1;
+					height -= chart.data[i].values[idx] * chart.yRatio;
 				}
-			}
 
-			self.barDrawHover();
-		})
+				var msg = chart.data[i].names[idx] + ':' + String(chart.data[i].values[idx]);
+				popupDiv = document.getElementById('popup_div');
+				popupDiv.style.display = 'block';
+				popupDiv.style.left = String(ev.clientX + 10) + 'px';
+				popupDiv.style.top = String(ev.clientY + 5) + 'px';
+				popupDiv.style.position = 'absolute';
+				popupDiv.style.background = chart.fillColor[idx];
+				popupDiv.innerHTML = msg;
+			}
+		}
+		chart.barDrawHover();
 	},
 
 	barDrawHover: function() {
