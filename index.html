@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>陈岩</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <style>
+        .main{
+            padding: 50px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="main">
+		<canvas id="canvas" width="800" height="600"></canvas>
+		<div id="popup_div" style="display:block;background-color:#00ffff;width:100;height:100">   
+		</div>   
+		<div id="control">
+			<button onclick="toBarGraph()">Bar</button>
+			<button onclick="toStreamGraph()">Stream</button>
+
+			<button onclick="toDataset1()">dataset1</button>
+			<button onclick="toDataset2()">dataset2</button>
+		</div>
+	</div>
+
+    <script src="./main.js"></script>
+
+</body>
+</html>
